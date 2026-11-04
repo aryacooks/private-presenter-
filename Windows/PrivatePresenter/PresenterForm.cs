@@ -178,7 +178,7 @@ internal sealed class PresenterForm : Form
                 editor.TextChanged += (_, _) =>
                 {
                     if (rebuilding) return;
-                    document.Pages[index] = editor.Rtf;
+                    document.Pages[index] = editor.Rtf ?? PresenterDocument.BlankRtf;
                     pageList.Items[index] = Preview(index, editor.Text);
                     ScheduleAutosave();
                 };
@@ -216,10 +216,14 @@ internal sealed class PresenterForm : Form
     }
 
     private void ScheduleAutosave() { autosave.Stop(); autosave.Start(); }
-    private void SaveAutosave() => DocumentStore.Save(document, autosavePath);
+    private void CaptureEdits()
+    {
+        for (int i = 0; i < editors.Count; i++) document.Pages[i] = editors[i].Rtf ?? PresenterDocument.BlankRtf;
+    }
+    private void SaveAutosave() { CaptureEdits(); DocumentStore.Save(document, autosavePath); }
     private void ChangedPages(string message) { BuildEditors(); ScheduleAutosave(); status.Text = message; }
     private void AddPage() { document.Add(); ChangedPages("Added page"); }
-    private void DuplicatePage() { document.Duplicate(document.CurrentPage); ChangedPages("Duplicated page"); }
+    private void DuplicatePage() { CaptureEdits(); document.Duplicate(document.CurrentPage); ChangedPages("Duplicated page"); }
     private void DeletePage() { document.Delete(document.CurrentPage); ChangedPages("Deleted page"); }
     private void ClearPage() { document.Pages[document.CurrentPage] = PresenterDocument.BlankRtf; ChangedPages("Cleared page"); }
 
@@ -236,7 +240,7 @@ internal sealed class PresenterForm : Form
         for (int i = 0; i < document.Pages.Count; i++)
         {
             using var clean = new RichTextBox { Font = new Font("Segoe UI", 22), ForeColor = Color.Black, BackColor = Color.White, Text = editors[i].Text };
-            document.Pages[i] = clean.Rtf;
+            document.Pages[i] = clean.Rtf ?? PresenterDocument.BlankRtf;
         }
         ChangedPages("Clean formatting applied to all pages");
     }
@@ -256,6 +260,7 @@ internal sealed class PresenterForm : Form
         var current = editor.SelectionFont ?? editor.Font;
         using var font = new Font(current, current.Style ^ style);
         editor.SelectionFont = font;
+        ScheduleAutosave();
         editor.Focus();
     }
 
@@ -265,10 +270,11 @@ internal sealed class PresenterForm : Form
         var font = editor.SelectionFont ?? editor.Font;
         using var replacement = new Font(font.FontFamily, Math.Max(6, font.Size + delta), font.Style);
         editor.SelectionFont = replacement;
+        ScheduleAutosave();
         editor.Focus();
     }
 
-    private void Align(HorizontalAlignment alignment) { ActiveEditor.SelectionAlignment = alignment; ActiveEditor.Focus(); }
+    private void Align(HorizontalAlignment alignment) { ActiveEditor.SelectionAlignment = alignment; ScheduleAutosave(); ActiveEditor.Focus(); }
 
     private void OpenDocument()
     {
@@ -282,7 +288,7 @@ internal sealed class PresenterForm : Form
             using var editor = new RichTextBox { Font = new Font("Segoe UI", 22) };
             if (Path.GetExtension(picker.FileName).Equals(".rtf", StringComparison.OrdinalIgnoreCase)) editor.LoadFile(picker.FileName, RichTextBoxStreamType.RichText);
             else editor.Text = File.ReadAllText(picker.FileName);
-            loaded = new PresenterDocument { Name = Path.GetFileNameWithoutExtension(picker.FileName), Pages = [editor.Rtf] };
+            loaded = new PresenterDocument { Name = Path.GetFileNameWithoutExtension(picker.FileName), Pages = [editor.Rtf ?? PresenterDocument.BlankRtf] };
         }
         SaveAutosave();
         document = loaded;
@@ -292,6 +298,7 @@ internal sealed class PresenterForm : Form
 
     private void SaveDocument(bool saveAs)
     {
+        CaptureEdits();
         string? path = saveAs ? null : documentPath;
         if (path is null)
         {

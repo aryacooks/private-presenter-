@@ -52,7 +52,8 @@ jobs:
       - name: Verify and package macOS
         run: |
           codesign --verify --deep --strict 'dist/Private Presenter.app'
-          lipo -verify_arch arm64 x86_64 'dist/Private Presenter.app/Contents/MacOS/PrivatePresenter'
+          architectures="$(lipo -archs 'dist/Private Presenter.app/Contents/MacOS/PrivatePresenter')"
+          [[ " $architectures " == *" arm64 "* && " $architectures " == *" x86_64 "* ]]
           mkdir -p release
           ditto -c -k --sequesterRsrc --keepParent 'dist/Private Presenter.app' release/PrivatePresenter-macos-universal.zip
           bash -n scripts/install-macos.sh

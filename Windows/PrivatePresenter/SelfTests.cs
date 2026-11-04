@@ -13,7 +13,7 @@ internal static class SelfTests
             editor.Select(0, 7);
             editor.SelectionFont = new Font("Segoe UI", 36, FontStyle.Bold);
             editor.SelectionColor = Color.Red;
-            document.Pages[0] = editor.Rtf;
+            document.Pages[0] = editor.Rtf ?? throw new InvalidOperationException("Editor did not produce RTF.");
             document.Add();
             document.Duplicate(0);
             Check(document.Pages.Count == 3 && document.Pages[0] == document.Pages[1], "Duplicate retains rich text");
