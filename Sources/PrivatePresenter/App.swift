@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var panel: PresenterPanel!
     private let model = PresenterModel()
     private var statusItem: NSStatusItem?
@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.sharingType = .none
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
+        panel.delegate = self
         panel.contentView = hostingView
         panel.center()
         panel.makeKeyAndOrderFront(nil)
@@ -42,7 +43,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        false
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        model.saveAutosaveNow()
+        sender.orderOut(nil)
+        return false
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showPresenter()
+        return true
     }
 
     func applicationWillTerminate(_ notification: Notification) {

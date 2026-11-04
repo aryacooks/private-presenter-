@@ -4,12 +4,18 @@ set -euo pipefail
 script_dir="${0:A:h}"
 cd "$script_dir"
 
-swift build -c release
+if [[ "${PRIVATE_PRESENTER_UNIVERSAL:-0}" == "1" ]]; then
+    swift build -c release --arch arm64 --arch x86_64
+    binary_dir="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
+else
+    swift build -c release
+    binary_dir="$(swift build -c release --show-bin-path)"
+fi
 
 app_dir="$script_dir/dist/Private Presenter.app"
 mkdir -p "$app_dir/Contents/MacOS"
 mkdir -p "$app_dir/Contents/Resources"
-cp "$script_dir/.build/release/PrivatePresenter" "$app_dir/Contents/MacOS/PrivatePresenter"
+cp "$binary_dir/PrivatePresenter" "$app_dir/Contents/MacOS/PrivatePresenter"
 
 /usr/libexec/PlistBuddy -c "Clear dict" "$app_dir/Contents/Info.plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c "Add :CFBundleName string Private Presenter" "$app_dir/Contents/Info.plist"

@@ -1,43 +1,107 @@
-# Private Presenter for macOS
+# Private Presenter
 
-A native floating document overlay with best-effort compatibility for older macOS window-capture paths.
+A floating, editable presenter-notes app for **Windows x64** and **macOS 13+**. Paste formatted notes, manage pages, and hide the window to the system tray or menu bar without quitting.
 
-Requires macOS 13 or later. This version uses Apple's AppKit and SwiftUI frameworks and does not run on Windows. Windows support would require a separate implementation of the window, rich-text editor, and system-tray controls.
+## Install on Windows
 
-While running, Private Presenter appears as a document icon in the macOS menu bar. Click it to show or hide the window, open/save a document, manage pages, clean formatting, clear everything, or quit. Hiding the window keeps the menu-bar icon available so you can bring it back.
+Open **PowerShell** and paste:
 
-## Build and run
-
-```sh
-chmod +x build_app.sh
-./build_app.sh
-open "dist/Private Presenter.app"
+```powershell
+irm https://raw.githubusercontent.com/aryacooks/private-presenter-/main/scripts/install-windows.ps1 | iex
 ```
 
-Open a `.docx`, `.rtf`, `.txt`, `.md`, or `.pdf` file, then use the arrow controls to change pages. PDF gives the most predictable page boundaries; Word and text files are repaginated for the overlay.
+Downloads the latest self-contained Windows x64 build, checks its SHA-256 checksum, installs it under `%LOCALAPPDATA%\Programs\Private Presenter`, adds a Start menu shortcut, and opens it. No administrator access, Git, or .NET installation is required. Requires 64-bit Windows 10 version 2004 or later, or Windows 11. On ARM Windows, the x64 build needs x64 emulation.
 
-The app opens as an editable untitled document. Type directly on a page, add pages from the sidebar, select any page to edit it, and paste with **Command-V**. **Paste into Page** appends the clipboard to the selected page. Both paste methods preserve fonts, sizes, colours, emphasis, and paragraph formatting supplied as RTF or HTML by the source app. Plain-text clipboards use the editor's text style. The size slider zooms the document without changing its saved font sizes.
+You can [read the installer](scripts/install-windows.ps1) before running it, or download and extract the Windows ZIP from [Releases](https://github.com/aryacooks/private-presenter-/releases/latest) and run `PrivatePresenter.exe` directly. Builds are not publisher-signed; Windows may display a reputation warning. Do not disable Windows security settings.
 
-The page navigator is on the right. Click-through behavior is intentionally disabled: ordinary left-clicks, right-clicks, and switching to another app do not hide the presenter. Close it only with the window's red close button or **Command-Q**.
+## Install on Mac
 
-Use **Page actions** below the page list to duplicate the selected page, clear its text, or delete it. Right-click any page in the list for the same actions on that page. Deleting the only remaining page leaves one blank page.
+Open **Terminal** and paste:
 
-All logical pages render as one continuous, gapless document in the main editor. Scroll normally to move into the next page; there is no page transition or separate next-page action. The right sidebar follows the currently visible page and can still be used for direct jumps.
+```sh
+curl -fsSL https://raw.githubusercontent.com/aryacooks/private-presenter-/main/scripts/install-macos.sh | bash
+```
 
-Fast page controls:
+Downloads the latest universal build for Apple Silicon and Intel, checks its SHA-256 checksum and app signature, installs it in `~/Applications`, and opens it. No Xcode or Git is required. This installer does not change a copy already in `/Applications`.
 
-- **Command-Shift-N** adds a page.
-- **Command-[** and **Command-]** move backward and forward.
-- **Command-1** through **Command-9** jump directly to those pages.
+You can [read the installer](scripts/install-macos.sh) first, or download and extract the Mac ZIP from [Releases](https://github.com/aryacooks/private-presenter-/releases/latest). The Mac app is ad-hoc signed, not Apple-notarized, so macOS may require you to approve the first launch using its normal **Privacy & Security → Open Anyway** flow. The installer does not remove quarantine or disable Gatekeeper.
 
-Documents are automatically recovered from `~/Library/Application Support/Private Presenter/Autosave.ppdoc` when the app reopens. Use **Command-S** to save a reusable `.ppdoc` project and **Command-O** to reopen it later.
+For either platform, quit the app using its tray/menu-bar **Quit** command before running the installer again to update. Documents are stored separately from the installed app.
 
-Select text and use the formatting toolbar for bold, italic, underline, font size, and left/center/right alignment. Standard **Command-B**, **Command-I**, and **Command-U** shortcuts are also available.
+## Using the app
 
-The **Document** menu in the bottom bar includes **Clean Formatting — All Pages**, which keeps the text and page divisions while applying regular 22-point system text in white, left alignment, and consistent spacing. It removes copied fonts, colours, highlights, and other styling. **Clear All…** asks for confirmation, then replaces all pages with one blank page. These changes autosave; use Save As first to keep a separate copy.
+- **Paste:** Command-V on Mac or Ctrl-V on Windows inserts at the cursor. **Paste into Page** appends to the selected page. RTF preserves fonts, sizes, colours, and paragraph styles. Mac also accepts HTML formatting; Windows uses native rich-text paste and falls back to text when the source supplies no RTF.
+- **Pages:** Add, duplicate, clear, or delete pages. Right-click a page for its actions. Deleting the last page leaves one blank page. Pages form one continuous scrollable document.
+- **Clean All Formatting:** Keeps text and page divisions while applying regular 22-point text with consistent alignment. Mac uses white text on its dark editor; Windows uses black text on white.
+- **Clear All:** Asks before replacing the document with one blank page. Save As first to keep a separate copy.
+- **Formatting:** Bold, italic, underline, size, alignment, and a document zoom slider. Zoom does not change saved font sizes.
+- **Close button:** Hides the window and saves an autosave. The app keeps running. Restore it through its menu-bar icon on Mac or by double-clicking its Windows tray icon. Right-click the Windows tray icon for its menu. Windows may place the icon in the tray overflow under the up arrow.
+- **Quit:** Use the tray/menu-bar Quit command, Command-Q on Mac, or Ctrl-Q on Windows.
+- **Window:** Always on top, with adjustable opacity. Windows also offers an always-on-top switch.
 
-## Critical limitation
+### File support
 
-The app requests `NSWindow.SharingType.none` for compatibility with older capture paths. Apple now documents this as a legacy value that macOS no longer uses and explicitly says not to rely on it to hide or omit content from capture. Zoom, Google Meet, and Teams control their own ScreenCaptureKit streams; this app cannot force those streams to exclude its window when you share an entire display.
+| | Mac | Windows |
+|---|---|---|
+| Open/save `.ppdoc` projects | Yes | Yes |
+| Open `.rtf`, `.txt`, `.md` | Yes | Yes |
+| Open `.docx`, `.pdf` | Yes | Export as RTF/text first |
+| Formatted paste | RTF and HTML | Native RTF; text fallback |
+| Window hide/restore | Menu bar | System tray |
 
-The built-in **Local Capture Test** is diagnostic only and cannot certify modern meeting-app behavior. Test a real private meeting recording with the exact app and sharing mode. The dependable arrangement is to put the presenter on a separate, unshared display (another monitor, Sidecar iPad, or another device) or share one application window instead of the whole display.
+`.ppdoc` uses the same version-1 JSON container with base64 RTF pages on both platforms. Fonts that are missing on the other platform are substituted. Rich-text rendering can differ between Apple and Windows editors. Windows imports each RTF/text file as one logical page; Mac repaginates document imports.
+
+### Autosave locations
+
+- Mac: `~/Library/Application Support/Private Presenter/Autosave.ppdoc`
+- Windows: `%LOCALAPPDATA%\Private Presenter\Autosave.ppdoc`
+
+Autosave restores on the next launch. Use Save or Save As for a named `.ppdoc` project. The Windows app allows one instance per user session; opening it again restores the existing window.
+
+### Shortcuts
+
+| Action | Mac | Windows |
+|---|---|---|
+| Open | Command-O | Ctrl-O |
+| Save / Save As | Command-S / Command-Shift-S | Ctrl-S / Ctrl-Shift-S |
+| Add page | Command-Shift-N | Ctrl-Shift-N |
+| Bold / Italic / Underline | Command-B / I / U | Ctrl-B / I / U |
+| Quit | Command-Q | Ctrl-Q |
+
+Mac also supports Command-[ / ] for previous/next page and Command-1 through Command-9 for page jumps.
+
+## Screen-capture limitations
+
+This is not a guarantee of invisibility during screen sharing. Test your exact meeting app and sharing mode before relying on it.
+
+Mac requests the legacy `NSWindow.sharingType.none` setting, which modern macOS capture paths may ignore. Its local capture preview cannot certify Zoom, Meet, or Teams behaviour. Sharing one application window or placing notes on a separate unshared display is the dependable arrangement.
+
+Windows requests [`WDA_EXCLUDEFROMCAPTURE`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowdisplayaffinity) by default. Microsoft supports it from Windows 10 version 2004, but says display affinity is not a strict protection guarantee. The footer shows whether Windows accepted the request; the checkbox can turn it off. Successful acceptance does not certify every third-party recorder.
+
+## Build from source
+
+### Mac
+
+Requires Xcode command-line tools and Swift 5.9 or later:
+
+```sh
+git clone https://github.com/aryacooks/private-presenter-.git
+cd private-presenter-
+./build_app.sh
+open 'dist/Private Presenter.app'
+```
+
+For a universal build, run `PRIVATE_PRESENTER_UNIVERSAL=1 ./build_app.sh`. Builds write only to `.build` and `dist`; building does not install or modify an existing app. Run `swift test` for the Mac tests.
+
+### Windows
+
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) and Git:
+
+```powershell
+git clone https://github.com/aryacooks/private-presenter-.git
+cd private-presenter-
+dotnet publish Windows/PrivatePresenter/PrivatePresenter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o dist/windows
+.\dist\windows\PrivatePresenter.exe
+```
+
+Run the executable with `--self-test` to check rich-text persistence, Unicode, page operations, autosave, and hide/restore lifecycle. GitHub Actions runs these on Windows and the Swift tests on macOS before publishing release ZIPs and checksums. Push a version tag such as `v1.1.0` to publish both builds; a workflow dispatch builds test artifacts without publishing.
